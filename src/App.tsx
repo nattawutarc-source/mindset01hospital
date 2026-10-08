@@ -24,6 +24,7 @@ import { PTDashboardView } from './components/PTDashboardView';
 import { PTPatientDetailView } from './components/PTPatientDetailView';
 import { PTShareModal } from './components/PTShareModal';
 import { PTRegisterModal } from './components/PTRegisterModal';
+import { QRScannerModal } from './components/QRScannerModal';
 
 export default function App() {
   const [role, setRole] = useState<UserRole>('patient');
@@ -39,7 +40,42 @@ export default function App() {
   // Modals state
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [modalPatient, setModalPatient] = useState<PatientProfile>(INITIAL_PATIENTS[0]);
+
+  // Auto-detect patient code from URL query params (when user scans QR code with phone)
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const codeParam = params.get('patient') || params.get('p') || params.get('code');
+    if (codeParam) {
+      const target = patients.find(
+        (p) =>
+          p.code.toLowerCase() === codeParam.toLowerCase() ||
+          p.id.toLowerCase() === codeParam.toLowerCase()
+      );
+      if (target) {
+        setActivePatient(target);
+        setRole('patient');
+        setCurrentScreen('home');
+      }
+    }
+  }, [patients]);
+
+  const handlePatientDetectedFromQR = (code: string) => {
+    const found = patients.find(
+      (p) =>
+        p.code.toLowerCase() === code.toLowerCase() ||
+        p.id.toLowerCase() === code.toLowerCase()
+    );
+    if (found) {
+      setActivePatient(found);
+      setQrScannerOpen(false);
+      setCurrentScreen(role === 'pt' ? 'pt-patient-detail' : 'home');
+    } else {
+      alert(`ไม่พบข้อมูลคนไข้รหัส ${code} ในระบบ`);
+    }
+  };
 
   // Handle Assessment Capture
   const handleSaveAssessmentData = (data: Partial<PostureAssessment>) => {
@@ -135,6 +171,7 @@ export default function App() {
           setModalPatient(activePatient);
           setShareModalOpen(true);
         }}
+        onOpenScannerModal={() => setQrScannerOpen(true)}
       />
 
       {/* Main Screen Body */}
@@ -329,6 +366,14 @@ export default function App() {
         onClose={() => setRegisterModalOpen(false)}
         nextCode={getNextPatientCode()}
         onRegister={handleRegisterPatient}
+      />
+
+      {/* QR Code Scanner Camera Modal */}
+      <QRScannerModal
+        isOpen={qrScannerOpen}
+        onClose={() => setQrScannerOpen(false)}
+        onPatientDetected={handlePatientDetectedFromQR}
+        patients={patients}
       />
     </div>
   );

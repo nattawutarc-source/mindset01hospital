@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X, Copy, Check, MessageCircle, Printer, QrCode } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
+import { X, Copy, Check, MessageCircle, Printer, Download, Sparkles, ExternalLink, QrCode } from 'lucide-react';
 import { PatientProfile } from '../types';
 
 interface PTShareModalProps {
@@ -14,7 +15,36 @@ export const PTShareModal: React.FC<PTShareModalProps> = ({
   onClose,
 }) => {
   const [copied, setCopied] = useState(false);
-  const patientLink = `https://ptcare.app/p/${patient.code.toLowerCase()}/abcX9`;
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [qrLoading, setQrLoading] = useState(true);
+
+  // Dynamic real URL linking to this patient
+  const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://ptcare.app';
+  const patientLink = `${appOrigin}?patient=${encodeURIComponent(patient.code)}&v=1`;
+
+  // Generate real scannable QR Code via QRCode API
+  useEffect(() => {
+    if (!isOpen) return;
+    setQrLoading(true);
+
+    QRCode.toDataURL(patientLink, {
+      width: 480,
+      margin: 2,
+      errorCorrectionLevel: 'H',
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff',
+      },
+    })
+      .then((url) => {
+        setQrDataUrl(url);
+        setQrLoading(false);
+      })
+      .catch((err) => {
+        console.error('QR Code API Error:', err);
+        setQrLoading(false);
+      });
+  }, [patientLink, isOpen]);
 
   if (!isOpen) return null;
 
@@ -24,13 +54,21 @@ export const PTShareModal: React.FC<PTShareModalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownloadQR = () => {
+    if (!qrDataUrl) return;
+    const link = document.createElement('a');
+    link.download = `QR_${patient.code}_${patient.name.replace(/\s+/g, '_')}.png`;
+    link.href = qrDataUrl;
+    link.click();
+  };
+
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 text-center shadow-2xl relative">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 text-center shadow-2xl relative max-h-[95vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
@@ -40,79 +78,57 @@ export const PTShareModal: React.FC<PTShareModalProps> = ({
 
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 block">
-            Patient Portal Access
+            QR Code API · สแกนได้จริง 100%
           </span>
           <h3 className="text-lg font-bold text-slate-900 mt-0.5">
-            ลิงก์ & QR Code ประจำตัวผู้ป่วย
+            QR Code ประจำตัวผู้ป่วย
           </h3>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
             {patient.name} ({patient.code})
           </p>
         </div>
 
-        {/* Realistic SVG QR Code Box */}
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl inline-block mx-auto">
-          <div className="w-44 h-44 bg-white p-2 rounded-xl border border-slate-100 flex flex-col items-center justify-center shadow-xs">
-            <svg
-              viewBox="0 0 100 100"
-              className="w-full h-full text-slate-900 fill-current"
-            >
-              {/* Corner position markers */}
-              <rect x="5" y="5" width="25" height="25" rx="3" fill="#0f172a" />
-              <rect x="9" y="9" width="17" height="17" rx="2" fill="white" />
-              <rect x="13" y="13" width="9" height="9" fill="#0284c7" />
-
-              <rect x="70" y="5" width="25" height="25" rx="3" fill="#0f172a" />
-              <rect x="74" y="9" width="17" height="17" rx="2" fill="white" />
-              <rect x="78" y="13" width="9" height="9" fill="#0284c7" />
-
-              <rect x="5" y="70" width="25" height="25" rx="3" fill="#0f172a" />
-              <rect x="9" y="74" width="17" height="17" rx="2" fill="white" />
-              <rect x="13" y="78" width="9" height="9" fill="#0284c7" />
-
-              {/* Data pattern matrices */}
-              <rect x="35" y="10" width="6" height="6" />
-              <rect x="45" y="15" width="8" height="6" />
-              <rect x="58" y="10" width="6" height="6" />
-              <rect x="35" y="25" width="12" height="6" />
-              <rect x="52" y="25" width="8" height="8" />
-
-              <rect x="10" y="38" width="8" height="8" />
-              <rect x="25" y="42" width="6" height="6" />
-              <rect x="38" y="38" width="16" height="8" />
-              <rect x="60" y="38" width="8" height="6" />
-              <rect x="75" y="42" width="12" height="6" />
-
-              <rect x="12" y="52" width="14" height="6" />
-              <rect x="32" y="52" width="8" height="12" />
-              <rect x="48" y="52" width="16" height="6" />
-              <rect x="70" y="52" width="14" height="10" />
-
-              <rect x="38" y="72" width="8" height="8" />
-              <rect x="52" y="75" width="12" height="6" />
-              <rect x="72" y="70" width="16" height="6" />
-              <rect x="42" y="85" width="18" height="8" />
-              <rect x="70" y="82" width="14" height="10" />
-            </svg>
+        {/* Real Dynamic Scannable QR Code Canvas Box */}
+        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl inline-block mx-auto shadow-xs">
+          <div className="w-48 h-48 bg-white p-2 rounded-xl border border-slate-100 flex items-center justify-center relative overflow-hidden">
+            {qrLoading ? (
+              <div className="flex flex-col items-center justify-center gap-2 text-slate-400 text-xs">
+                <div className="w-6 h-6 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
+                <span>กำลังสร้าง QR Code...</span>
+              </div>
+            ) : qrDataUrl ? (
+              <img
+                src={qrDataUrl}
+                alt={`QR Code for ${patient.code}`}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="text-xs text-rose-500">สร้าง QR Code ไม่สำเร็จ</div>
+            )}
           </div>
-          <span className="text-[11px] font-mono font-bold text-slate-700 block mt-2">
-            รหัสคนไข้: {patient.code}
-          </span>
+          <div className="mt-2 flex items-center justify-center gap-1.5">
+            <span className="text-[11px] font-mono font-bold text-slate-800">
+              รหัส: {patient.code}
+            </span>
+            <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+              <Check className="w-3 h-3 stroke-[3]" /> พร้อมสแกน
+            </span>
+          </div>
         </div>
 
         {/* Direct Link box */}
         <div className="flex items-center gap-2 p-2 bg-slate-100 rounded-xl border border-slate-200">
-          <span className="text-xs font-mono text-slate-600 truncate flex-1 text-left px-1">
+          <span className="text-[11px] font-mono text-slate-600 truncate flex-1 text-left px-1">
             {patientLink}
           </span>
           <button
             onClick={handleCopy}
-            className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 text-xs font-medium rounded-lg border border-slate-200 shadow-xs flex items-center gap-1 shrink-0 transition-colors"
+            className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 text-xs font-medium rounded-lg border border-slate-200 shadow-xs flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
           >
             {copied ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-emerald-700">คัดลอกแล้ว</span>
+                <span className="text-emerald-700 font-semibold">คัดลอกแล้ว</span>
               </>
             ) : (
               <>
@@ -123,42 +139,52 @@ export const PTShareModal: React.FC<PTShareModalProps> = ({
           </button>
         </div>
 
-        {/* Share Channel Buttons */}
-        <div className="grid grid-cols-3 gap-2 pt-2">
-          {/* LINE */}
+        {/* Share & Download Actions */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          {/* LINE Share */}
           <button
             onClick={() => {
               const url = `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(patientLink)}`;
               window.open(url, '_blank');
             }}
-            className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-colors"
+            className="p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-700 text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
           >
             <MessageCircle className="w-4 h-4 text-emerald-600" />
-            <span>LINE</span>
+            <span>ส่งผ่าน LINE</span>
           </button>
 
-          {/* Copy Link */}
+          {/* Download QR Image */}
           <button
-            onClick={handleCopy}
-            className="p-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-colors"
+            onClick={handleDownloadQR}
+            className="p-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 active:scale-95 text-sky-700 text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
           >
-            <Copy className="w-4 h-4 text-sky-600" />
-            <span>คัดลอกลิงก์</span>
+            <Download className="w-4 h-4 text-sky-600" />
+            <span>โหลดรูป QR</span>
           </button>
 
-          {/* Print */}
+          {/* Print Card */}
           <button
             onClick={handlePrint}
-            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-colors"
+            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-all cursor-pointer"
           >
             <Printer className="w-4 h-4 text-slate-600" />
-            <span>พิมพ์</span>
+            <span>พิมพ์ใบงาน</span>
           </button>
         </div>
 
-        <p className="text-[11px] text-slate-400">
-          ผู้ป่วยสามารถสแกนเปิดบนโทรศัพท์เพื่อทำแบบประเมินและดูท่า HEP ได้ทันทีโดยไม่ต้องจำรหัสผ่าน
-        </p>
+        {/* Instructions */}
+        <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-left text-[11px] text-slate-500 space-y-1">
+          <div className="font-semibold text-slate-700 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-sky-600" />
+            <span>วิธีใช้งานสำหรับคนไข้:</span>
+          </div>
+          <p>
+            1. เปิดแอปกล้องในโทรศัพท์ หรือฟังก์ชันสแกน QR ใน LINE
+          </p>
+          <p>
+            2. สแกน QR Code นี้ จะเข้าสู่โปรแกรมกายภาพบำบัดของ {patient.name} ทันทีโดยไม่ต้องล็อกอิน
+          </p>
+        </div>
       </div>
     </div>
   );

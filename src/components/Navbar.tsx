@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserRole, ScreenId } from '../types';
-import { Stethoscope, User, Smartphone, RefreshCw, QrCode } from 'lucide-react';
+import { Stethoscope, User, Smartphone, RefreshCw, QrCode, ScanLine } from 'lucide-react';
 
 interface NavbarProps {
   currentRole: UserRole;
@@ -9,6 +9,7 @@ interface NavbarProps {
   onNavigate: (screen: ScreenId) => void;
   patientCode: string;
   onOpenShareModal: () => void;
+  onOpenScannerModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -18,6 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate,
   patientCode,
   onOpenShareModal,
+  onOpenScannerModal,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -41,7 +43,18 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Action Controls & Role Switcher */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {onOpenScannerModal && (
+            <button
+              onClick={onOpenScannerModal}
+              title="สแกน QR Code คนไข้"
+              className="p-1.5 px-2 text-slate-700 hover:text-sky-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium cursor-pointer border border-slate-200"
+            >
+              <ScanLine className="w-3.5 h-3.5 text-sky-600" />
+              <span className="hidden sm:inline">สแกน QR</span>
+            </button>
+          )}
+
           {currentRole === 'pt' && (
             <button
               onClick={() => onNavigate('pt-dashboard')}
@@ -51,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              แดชบอร์ดคลินิก
+              แดชบอร์ด
             </button>
           )}
 
