@@ -1,0 +1,7 @@
+{
+  "name": "PT Posture Progress - กายภาพบำบัด & วิเคราะห์ท่าทาง",
+  "description": "ระบบตรวจประเมินท่าทาง (CVA angle), ติดตามอาการปวด และโปรแกรมออกกำลังกาย HEP สำหรับผู้ป่วยและนักกายภาพบำบัด",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
