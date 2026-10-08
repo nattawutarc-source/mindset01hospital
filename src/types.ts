@@ -1,6 +1,17 @@
-export type UserRole = 'patient' | 'pt';
+export type UserRole = 'patient' | 'admin';
 
 export type ViewAngle = 'front' | 'side' | 'back';
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  role: UserRole;
+  patientCode?: string; // e.g. "P001" if role is patient
+  hn?: string;
+  email?: string;
+  title?: string;
+}
 
 export type ScreenId =
   | 'home'

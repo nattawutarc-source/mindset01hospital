@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { UserRole, ScreenId, PatientProfile, PostureAssessment, Exercise, SymptomLog, ViewAngle } from './types';
+import React, { useState, useEffect } from 'react';
+import { UserRole, ScreenId, PatientProfile, PostureAssessment, Exercise, SymptomLog, ViewAngle, AuthUser } from './types';
 import { INITIAL_PATIENTS, INITIAL_ASSESSMENT_P001_W0, ASSESSMENT_P001_W4, EXERCISES } from './data/mockData';
+import { SYSTEM_ACCOUNTS } from './data/authData';
 import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
+import { LoginView } from './components/LoginView';
 import { HomeView } from './components/HomeView';
 import { CameraGuideView } from './components/CameraGuideView';
 import { CaptureView } from './components/CaptureView';
@@ -26,14 +28,25 @@ import { PTShareModal } from './components/PTShareModal';
 import { PTRegisterModal } from './components/PTRegisterModal';
 import { QRScannerModal } from './components/QRScannerModal';
 
+const AUTH_STORAGE_KEY = 'physio_auth_user_v2';
+
 export default function App() {
-  const [role, setRole] = useState<UserRole>('patient');
-  const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
   const [patients, setPatients] = useState<PatientProfile[]>(INITIAL_PATIENTS);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [activePatient, setActivePatient] = useState<PatientProfile>(INITIAL_PATIENTS[0]);
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>('home');
   const [captureAngle, setCaptureAngle] = useState<ViewAngle>('side');
 
-  // Current active assessment data (captured or baseline)
+  // Current active assessment data
   const [currentAssessment, setCurrentAssessment] = useState<PostureAssessment>(INITIAL_ASSESSMENT_P001_W0);
   const [selectedExercise, setSelectedExercise] = useState<Exercise>(EXERCISES[0]);
 
@@ -43,11 +56,29 @@ export default function App() {
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [modalPatient, setModalPatient] = useState<PatientProfile>(INITIAL_PATIENTS[0]);
 
-  // Auto-detect patient code from URL query params (when user scans QR code with phone)
-  React.useEffect(() => {
+  // Sync active patient with logged in patient user
+  useEffect(() => {
+    if (currentUser?.role === 'patient' && currentUser.patientCode) {
+      const match = patients.find(
+        (p) => p.code.toLowerCase() === currentUser.patientCode?.toLowerCase()
+      );
+      if (match) {
+        setActivePatient(match);
+        // Default patient assessment to this patient's latest
+        if (match.assessments && match.assessments.length > 0) {
+          setCurrentAssessment(match.assessments[match.assessments.length - 1]);
+        }
+      }
+    }
+  }, [currentUser, patients]);
+
+  // URL Query Parameter Detection (e.g. scanning QR code opens https://app?patient=P001)
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const codeParam = params.get('patient') || params.get('p') || params.get('code');
+    const roleParam = params.get('role');
+
     if (codeParam) {
       const target = patients.find(
         (p) =>
@@ -55,26 +86,120 @@ export default function App() {
           p.id.toLowerCase() === codeParam.toLowerCase()
       );
       if (target) {
+        // Auto-authenticate as patient from scanned QR code
+        const patientAuth: AuthUser = {
+          id: `usr-${target.code.toLowerCase()}`,
+          username: target.code.toLowerCase(),
+          name: target.name,
+          role: 'patient',
+          patientCode: target.code,
+          hn: target.hn,
+          title: target.condition,
+        };
+        setCurrentUser(patientAuth);
+        try {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(patientAuth));
+        } catch {}
         setActivePatient(target);
-        setRole('patient');
         setCurrentScreen('home');
+      }
+    } else if (roleParam === 'admin' && !currentUser) {
+      // Optional shortcut if specified
+      const adminAcc = SYSTEM_ACCOUNTS.find((a) => a.role === 'admin');
+      if (adminAcc) {
+        setCurrentUser(adminAcc);
+        setCurrentScreen('pt-dashboard');
       }
     }
   }, [patients]);
 
+  // Security Guard: Prevent patients from accessing PT/Admin views
+  useEffect(() => {
+    if (currentUser?.role === 'patient') {
+      if (currentScreen === 'pt-dashboard' || currentScreen === 'pt-patient-detail') {
+        setCurrentScreen('home');
+      }
+    }
+  }, [currentUser, currentScreen]);
+
+  // Handle Login Success
+  const handleLoginSuccess = (user: AuthUser) => {
+    setCurrentUser(user);
+    try {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    } catch {}
+
+    if (user.role === 'patient') {
+      const target = patients.find(
+        (p) => p.code.toLowerCase() === (user.patientCode || '').toLowerCase()
+      );
+      if (target) {
+        setActivePatient(target);
+        if (target.assessments && target.assessments.length > 0) {
+          setCurrentAssessment(target.assessments[target.assessments.length - 1]);
+        }
+      }
+      setCurrentScreen('home');
+    } else {
+      // Admin defaults to PT Clinic Dashboard
+      setCurrentScreen('pt-dashboard');
+    }
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    setCurrentUser(null);
+    try {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch {}
+    setCurrentScreen('home');
+  };
+
+  // Handle QR Detection (from modal scanner)
   const handlePatientDetectedFromQR = (code: string) => {
     const found = patients.find(
       (p) =>
         p.code.toLowerCase() === code.toLowerCase() ||
         p.id.toLowerCase() === code.toLowerCase()
     );
+
     if (found) {
       setActivePatient(found);
       setQrScannerOpen(false);
-      setCurrentScreen(role === 'pt' ? 'pt-patient-detail' : 'home');
+
+      if (!currentUser) {
+        // Log in as this patient directly
+        const patientAuth: AuthUser = {
+          id: `usr-${found.code.toLowerCase()}`,
+          username: found.code.toLowerCase(),
+          name: found.name,
+          role: 'patient',
+          patientCode: found.code,
+          hn: found.hn,
+          title: found.condition,
+        };
+        handleLoginSuccess(patientAuth);
+      } else if (currentUser.role === 'admin') {
+        // Admin views this patient's detail record
+        setCurrentScreen('pt-patient-detail');
+      } else {
+        // Patient user switched to their own record
+        setCurrentScreen('home');
+      }
     } else {
       alert(`ไม่พบข้อมูลคนไข้รหัส ${code} ในระบบ`);
     }
+  };
+
+  // Safe Navigation Handler
+  const handleSafeNavigate = (screen: ScreenId) => {
+    if (currentUser?.role === 'patient') {
+      if (screen === 'pt-dashboard' || screen === 'pt-patient-detail') {
+        setCurrentScreen('home');
+        return;
+      }
+    }
+    setCurrentScreen(screen);
   };
 
   // Handle Assessment Capture
@@ -125,7 +250,7 @@ export default function App() {
     setPatients(patients.map((p) => (p.id === activePatient.id ? updatedPatient : p)));
   };
 
-  // Register New Patient
+  // Register New Patient (Admin only)
   const handleRegisterPatient = (newPatient: PatientProfile) => {
     setPatients([newPatient, ...patients]);
     setActivePatient(newPatient);
@@ -133,7 +258,7 @@ export default function App() {
     setShareModalOpen(true);
   };
 
-  // Update PT Notes
+  // Update PT Notes (Admin only)
   const handleUpdatePtNotes = (patientId: string, notes: string) => {
     setPatients(
       patients.map((p) => {
@@ -154,19 +279,47 @@ export default function App() {
     return `P00${nextNum}`.slice(-4);
   };
 
+  // If user is not logged in, display the Login View
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+        <LoginView
+          onLoginSuccess={handleLoginSuccess}
+          onOpenQRScanner={() => setQrScannerOpen(true)}
+          patients={patients}
+        />
+
+        {/* QR Scanner Modal for Instant Patient Login */}
+        <QRScannerModal
+          isOpen={qrScannerOpen}
+          onClose={() => setQrScannerOpen(false)}
+          onPatientDetected={handlePatientDetectedFromQR}
+          patients={patients}
+        />
+      </div>
+    );
+  }
+
+  const role: UserRole = currentUser.role;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-      {/* Top Navbar with Role Switching & Clinic branding */}
+      {/* Top Navbar with Role Enforcement */}
       <Navbar
+        currentUser={currentUser}
         currentRole={role}
         onRoleChange={(newRole) => {
-          setRole(newRole);
-          if (newRole === 'pt') setCurrentScreen('pt-dashboard');
+          if (currentUser.role === 'patient' && newRole === 'admin') {
+            // Patients cannot switch to admin
+            return;
+          }
+          if (newRole === 'admin') setCurrentScreen('pt-dashboard');
           else setCurrentScreen('home');
         }}
         currentScreen={currentScreen}
-        onNavigate={(screen) => setCurrentScreen(screen)}
+        onNavigate={handleSafeNavigate}
         patientCode={activePatient.code}
+        onLogout={handleLogout}
         onOpenShareModal={() => {
           setModalPatient(activePatient);
           setShareModalOpen(true);
@@ -176,11 +329,11 @@ export default function App() {
 
       {/* Main Screen Body */}
       <main className="flex-1 w-full pb-6">
-        {/* Screen 1: Home View */}
+        {/* Screen 1: Home View (Patient Home or Admin Preview) */}
         {currentScreen === 'home' && (
           <HomeView
             patient={activePatient}
-            onNavigate={(screen) => setCurrentScreen(screen)}
+            onNavigate={(screen) => handleSafeNavigate(screen)}
           />
         )}
 
@@ -195,11 +348,17 @@ export default function App() {
           />
         )}
 
-        {/* Screen 3: Camera Capture with Real-Time Plumb Line & Landmarks (ด้านหน้า · ด้านข้าง · ด้านหลัง) */}
+        {/* Screen 3: Mobile Camera Capture (Front · Side · Back) */}
         {currentScreen === 'capture' && (
           <CaptureView
             initialMode={captureAngle}
-            onClose={() => setCurrentScreen('camera-guide')}
+            onClose={() => {
+              if (role === 'admin' && currentScreen === 'capture') {
+                setCurrentScreen('pt-patient-detail');
+              } else {
+                setCurrentScreen('camera-guide');
+              }
+            }}
             onSaveAssessment={handleSaveAssessmentData}
           />
         )}
@@ -259,7 +418,7 @@ export default function App() {
           <BaselineSummaryView
             assessment={currentAssessment}
             onStartExercise={() => setCurrentScreen('exercise-list')}
-            onNavigate={(screen) => setCurrentScreen(screen)}
+            onNavigate={(screen) => handleSafeNavigate(screen)}
           />
         )}
 
@@ -310,8 +469,8 @@ export default function App() {
           <ArticlesView onBack={() => setCurrentScreen('home')} />
         )}
 
-        {/* PT Flow - Clinic Dashboard */}
-        {currentScreen === 'pt-dashboard' && (
+        {/* ADMIN ONLY: PT Flow - Clinic Dashboard */}
+        {role === 'admin' && currentScreen === 'pt-dashboard' && (
           <PTDashboardView
             patients={patients}
             onSelectPatient={(p) => {
@@ -330,8 +489,8 @@ export default function App() {
           />
         )}
 
-        {/* PT Flow - Patient Detailed Clinical View */}
-        {currentScreen === 'pt-patient-detail' && (
+        {/* ADMIN ONLY: PT Flow - Patient Detailed Clinical View */}
+        {role === 'admin' && currentScreen === 'pt-patient-detail' && (
           <PTPatientDetailView
             patient={activePatient}
             onBack={() => setCurrentScreen('pt-dashboard')}
@@ -345,13 +504,15 @@ export default function App() {
         )}
       </main>
 
-      {/* Patient Bottom Navigation Bar (Hidden during full-screen camera capture or PT dashboard) */}
-      {role === 'patient' && currentScreen !== 'capture' && (
-        <BottomNav
-          currentScreen={currentScreen}
-          onNavigate={(screen) => setCurrentScreen(screen)}
-        />
-      )}
+      {/* Patient Bottom Navigation Bar (Shown for patient users or admin previewing patient view) */}
+      {currentScreen !== 'capture' &&
+        currentScreen !== 'pt-dashboard' &&
+        currentScreen !== 'pt-patient-detail' && (
+          <BottomNav
+            currentScreen={currentScreen}
+            onNavigate={(screen) => handleSafeNavigate(screen)}
+          />
+        )}
 
       {/* Share / QR Code Modal */}
       <PTShareModal
@@ -360,13 +521,15 @@ export default function App() {
         onClose={() => setShareModalOpen(false)}
       />
 
-      {/* Register New Patient Modal */}
-      <PTRegisterModal
-        isOpen={registerModalOpen}
-        onClose={() => setRegisterModalOpen(false)}
-        nextCode={getNextPatientCode()}
-        onRegister={handleRegisterPatient}
-      />
+      {/* Register New Patient Modal (Admin only) */}
+      {role === 'admin' && (
+        <PTRegisterModal
+          isOpen={registerModalOpen}
+          onClose={() => setRegisterModalOpen(false)}
+          nextCode={getNextPatientCode()}
+          onRegister={handleRegisterPatient}
+        />
+      )}
 
       {/* QR Code Scanner Camera Modal */}
       <QRScannerModal
