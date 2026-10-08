@@ -27,6 +27,7 @@ import { PTPatientDetailView } from './components/PTPatientDetailView';
 import { PTShareModal } from './components/PTShareModal';
 import { PTRegisterModal } from './components/PTRegisterModal';
 import { QRScannerModal } from './components/QRScannerModal';
+import { ExportHTMLModal } from './components/ExportHTMLModal';
 
 const AUTH_STORAGE_KEY = 'physio_auth_user_v2';
 
@@ -54,6 +55,7 @@ export default function App() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [modalPatient, setModalPatient] = useState<PatientProfile>(INITIAL_PATIENTS[0]);
 
   // Sync active patient with logged in patient user
@@ -325,6 +327,7 @@ export default function App() {
           setShareModalOpen(true);
         }}
         onOpenScannerModal={() => setQrScannerOpen(true)}
+        onOpenExportModal={() => setExportModalOpen(true)}
       />
 
       {/* Main Screen Body */}
@@ -537,6 +540,12 @@ export default function App() {
         onClose={() => setQrScannerOpen(false)}
         onPatientDetected={handlePatientDetectedFromQR}
         patients={patients}
+      />
+
+      {/* Export Standalone HTML Modal */}
+      <ExportHTMLModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
       />
     </div>
   );

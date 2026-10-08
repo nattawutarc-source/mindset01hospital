@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PatientProfile, ScreenId } from '../types';
-import { Users, Plus, Search, CheckCircle2, Clock, AlertCircle, QrCode, ChevronRight, Stethoscope } from 'lucide-react';
+import { Users, Plus, Search, CheckCircle2, Clock, AlertCircle, QrCode, ChevronRight, Stethoscope, Download } from 'lucide-react';
 
 interface PTDashboardViewProps {
   patients: PatientProfile[];
@@ -51,14 +51,28 @@ export const PTDashboardView: React.FC<PTDashboardViewProps> = ({
           </p>
         </div>
 
-        {/* Register New Patient Button */}
-        <button
-          onClick={onOpenRegisterModal}
-          className="h-11 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 transition-colors cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>เพิ่มผู้ป่วยใหม่ (สร้างรหัสอัตโนมัติ)</span>
-        </button>
+        {/* Header Action Buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href="/physio-care-standalone.html"
+            download="physio-care-app.html"
+            className="h-11 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            title="ดาวน์โหลดไฟล์ Standalone HTML รวมทุกอย่างในไฟล์เดียว"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">ดาวน์โหลดไฟล์ HTML</span>
+            <span className="sm:hidden">HTML</span>
+          </a>
+
+          {/* Register New Patient Button */}
+          <button
+            onClick={onOpenRegisterModal}
+            className="h-11 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>เพิ่มผู้ป่วยใหม่</span>
+          </button>
+        </div>
       </div>
 
       {/* Metric Counters Grid */}

@@ -9,6 +9,8 @@ import {
   LogOut,
   ShieldCheck,
   ChevronRight,
+  Download,
+  FileCode,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -21,6 +23,7 @@ interface NavbarProps {
   onLogout: () => void;
   onOpenShareModal: () => void;
   onOpenScannerModal?: () => void;
+  onOpenExportModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -33,6 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onOpenShareModal,
   onOpenScannerModal,
+  onOpenExportModal,
 }) => {
   const isAdmin = currentUser?.role === 'admin';
 
@@ -125,6 +129,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
 
+              {/* Export Standalone HTML Button */}
+              {onOpenExportModal && (
+                <button
+                  onClick={onOpenExportModal}
+                  title="ดาวน์โหลด / ส่งออกไฟล์ HTML พร้อมใช้งาน"
+                  className="p-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">ไฟล์ HTML</span>
+                </button>
+              )}
+
               {/* Admin Profile & Logout */}
               <button
                 onClick={onLogout}
@@ -157,6 +173,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <QrCode className="w-4 h-4 text-sky-600" />
               </button>
+
+              {/* Export HTML Button for Patient */}
+              {onOpenExportModal && (
+                <button
+                  onClick={onOpenExportModal}
+                  title="ดาวน์โหลดไฟล์ HTML ของโปรแกรม"
+                  className="p-1.5 text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-emerald-600" />
+                </button>
+              )}
 
               {/* Logout Button */}
               <button
