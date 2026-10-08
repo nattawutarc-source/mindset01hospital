@@ -7,18 +7,18 @@ export interface UserAccount extends AuthUser {
 export const SYSTEM_ACCOUNTS: UserAccount[] = [
   // Admin / Physical Therapist Accounts
   {
-    id: 'usr-admin-1',
-    username: 'admin',
-    passwordHash: 'admin123',
-    name: 'กภ. ชลธิชา วงศ์สวัสดิ์',
+    id: 'usr-admin-mimnasikan',
+    username: 'mimnasikan',
+    passwordHash: '123456',
+    name: 'กภ. มิมนสิการ (ผู้ดูแลระบบคลินิก)',
     role: 'admin',
-    title: 'หัวหน้านักกายภาพบำบัด (ผู้ดูแลระบบคลินิก)',
-    email: 'admin.physio@clinic.com',
+    title: 'หัวหน้านักกายภาพบำบัด / ผู้ดูแลระบบคลินิก',
+    email: 'mimnasikan@physiocare.com',
   },
   {
     id: 'usr-pt-1',
     username: 'pt01',
-    passwordHash: 'pt1234',
+    passwordHash: '123456',
     name: 'กภ. นัฐวุฒิ นพรัตน์',
     role: 'admin',
     title: 'นักกายภาพบำบัดวิชาชีพ',

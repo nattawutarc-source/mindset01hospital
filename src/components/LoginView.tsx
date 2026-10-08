@@ -7,13 +7,9 @@ import {
   Stethoscope,
   Lock,
   ArrowRight,
-  QrCode,
   ScanLine,
   AlertCircle,
-  KeyRound,
-  CheckCircle2,
-  Sparkles,
-  Smartphone
+  Sparkles
 } from 'lucide-react';
 
 interface LoginViewProps {
@@ -114,21 +110,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
 
     onLoginSuccess(account);
-  };
-
-  // Quick Demo Logins
-  const handleQuickPatient = (code: string) => {
-    const account = SYSTEM_ACCOUNTS.find((acc) => acc.patientCode === code);
-    if (account) {
-      onLoginSuccess(account);
-    }
-  };
-
-  const handleQuickAdmin = () => {
-    const account = SYSTEM_ACCOUNTS.find((acc) => acc.username === 'admin');
-    if (account) {
-      onLoginSuccess(account);
-    }
   };
 
   return (
@@ -261,36 +242,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>
-
-              {/* Quick Click Sample Patient Accounts */}
-              <div className="pt-2 border-t border-slate-100 text-center space-y-1.5">
-                <span className="text-[11px] text-slate-400 block font-medium">
-                  คลิกเพื่อทดสอบเข้าสู่ระบบผู้ป่วยทันที:
-                </span>
-                <div className="flex flex-wrap items-center justify-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickPatient('P001')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-sky-50 hover:border-sky-300 border border-slate-200 rounded-lg text-[11px] font-mono text-slate-700 transition-colors cursor-pointer"
-                  >
-                    P001 (คุณนภัส)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickPatient('P002')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-sky-50 hover:border-sky-300 border border-slate-200 rounded-lg text-[11px] font-mono text-slate-700 transition-colors cursor-pointer"
-                  >
-                    P002 (คุณธีรภัทร)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickPatient('P003')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-sky-50 hover:border-sky-300 border border-slate-200 rounded-lg text-[11px] font-mono text-slate-700 transition-colors cursor-pointer"
-                  >
-                    P003 (คุณพัชรา)
-                  </button>
-                </div>
-              </div>
             </div>
           )}
 
@@ -307,7 +258,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <form onSubmit={handleAdminSubmit} className="space-y-3 text-xs">
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">
-                    ชื่อผู้ใช้ / อีเมลผู้ดูแลระบบ
+                    ชื่อผู้ใช้ / รหัส Admin
                   </label>
                   <div className="relative">
                     <Stethoscope className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -318,8 +269,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         setAdminUsername(e.target.value);
                         setAdminError(null);
                       }}
-                      placeholder="เช่น admin หรือ pt01"
-                      className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-sky-600"
+                      placeholder="เช่น mimnasikan"
+                      className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-sky-600 font-mono"
                     />
                   </div>
                 </div>
@@ -337,7 +288,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         setAdminPassword(e.target.value);
                         setAdminError(null);
                       }}
-                      placeholder="กรอกรหัสผ่านผู้ดูแลระบบ"
+                      placeholder="กรอกรหัสผ่าน (123456)"
                       className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-sky-600"
                     />
                   </div>
@@ -358,21 +309,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <span>เข้าสู่ระบบผู้ดูแลระบบ (Admin Portal)</span>
                 </button>
               </form>
-
-              {/* Quick Click Sample Admin Login */}
-              <div className="pt-2 border-t border-slate-100 text-center space-y-1.5">
-                <span className="text-[11px] text-slate-400 block font-medium">
-                  คลิกเพื่อทดสอบเข้าสู่ระบบผู้ดูแลระบบทันที:
-                </span>
-                <button
-                  type="button"
-                  onClick={handleQuickAdmin}
-                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-sky-600" />
-                  <span>เข้าสู่ระบบเป็น Admin (admin / admin123)</span>
-                </button>
-              </div>
             </div>
           )}
         </div>

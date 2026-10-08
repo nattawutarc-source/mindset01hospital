@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Check, Calendar, Activity, AlertCircle, History } from 'lucide-react';
+import { ArrowLeft, Check, Calendar, Activity, AlertCircle, History, Trash2 } from 'lucide-react';
 import { SymptomLog } from '../types';
 
 interface SymptomTrackerViewProps {
   onBack: () => void;
   onSaveLog: (log: Omit<SymptomLog, 'id'>) => void;
   existingLogs: SymptomLog[];
+  onDeleteLog?: (logId: string) => void;
 }
 
 export const SymptomTrackerView: React.FC<SymptomTrackerViewProps> = ({
   onBack,
   onSaveLog,
   existingLogs,
+  onDeleteLog,
 }) => {
   const [restPain, setRestPain] = useState(2);
   const [workPain, setWorkPain] = useState(4);
@@ -203,19 +205,31 @@ export const SymptomTrackerView: React.FC<SymptomTrackerViewProps> = ({
           </div>
 
           <div className="space-y-2 divide-y divide-slate-100">
-            {existingLogs.slice(-3).reverse().map((log) => (
-              <div key={log.id} className="pt-2 flex items-center justify-between text-xs">
+            {existingLogs.slice(-5).reverse().map((log) => (
+              <div key={log.id} className="pt-2 flex items-center justify-between text-xs gap-2">
                 <div>
                   <span className="font-semibold text-slate-800">{log.date}</span>
                   <div className="text-[10px] text-slate-400 mt-0.5">
                     ปัจจัย: {log.triggers.join(', ') || 'ไม่มี'}
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-500 block">พัก / ทำงาน</span>
-                  <span className="font-mono font-bold text-slate-800">
-                    {log.restPain} / {log.workPain}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-500 block">พัก / ทำงาน</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      {log.restPain} / {log.workPain}
+                    </span>
+                  </div>
+                  {onDeleteLog && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteLog(log.id)}
+                      title="ลบบันทึกนี้"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

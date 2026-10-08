@@ -1,22 +1,30 @@
 import React, { useState } from 'react';
 import { Exercise, ScreenId } from '../types';
-import { ArrowLeft, Play, Dumbbell, Clock, CheckCircle2, ChevronRight, Sparkles } from 'lucide-react';
+import { ArrowLeft, Play, Dumbbell, Clock, CheckCircle2, ChevronRight, Sparkles, Edit3, Trash2 } from 'lucide-react';
 import { EXERCISES } from '../data/mockData';
 
 interface ExerciseListViewProps {
   onBack: () => void;
   onSelectExercise: (exercise: Exercise) => void;
   onStartTodayWorkout: () => void;
+  exercises?: Exercise[];
+  isAdmin?: boolean;
+  onEditExercise?: (exercise: Exercise) => void;
+  onDeleteExercise?: (exerciseId: string) => void;
 }
 
 export const ExerciseListView: React.FC<ExerciseListViewProps> = ({
   onBack,
   onSelectExercise,
   onStartTodayWorkout,
+  exercises = EXERCISES,
+  isAdmin = false,
+  onEditExercise,
+  onDeleteExercise,
 }) => {
   const [activeTab, setActiveTab] = useState<'1-2' | '3-4'>('1-2');
 
-  const filteredExercises = EXERCISES.filter((ex) => {
+  const filteredExercises = exercises.filter((ex) => {
     if (activeTab === '1-2') {
       return ex.phaseWeeks === '1-2' || ex.id === 'scapular-retraction';
     }
@@ -105,9 +113,36 @@ export const ExerciseListView: React.FC<ExerciseListViewProps> = ({
               </div>
             </div>
 
-            {/* Blue Play Button */}
-            <div className="w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center shadow-sm shrink-0 group-hover:scale-110 group-hover:bg-sky-500 transition-all">
-              <Play className="w-4 h-4 fill-white ml-0.5" />
+            {/* Action Buttons: Play or Admin Edit/Delete */}
+            <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+              {isAdmin && onEditExercise && (
+                <button
+                  type="button"
+                  onClick={() => onEditExercise(exercise)}
+                  title="แก้ไขข้อมูลท่ากายภาพ"
+                  className="p-2 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+              )}
+              {isAdmin && onDeleteExercise && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteExercise(exercise.id)}
+                  title="ลบท่ากายภาพนี้"
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+              {/* Blue Play Button */}
+              <button
+                type="button"
+                onClick={() => onSelectExercise(exercise)}
+                className="w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center shadow-sm shrink-0 hover:scale-110 hover:bg-sky-500 transition-all cursor-pointer"
+              >
+                <Play className="w-4 h-4 fill-white ml-0.5" />
+              </button>
             </div>
           </div>
         ))}

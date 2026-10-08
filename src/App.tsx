@@ -28,11 +28,16 @@ import { PTShareModal } from './components/PTShareModal';
 import { PTRegisterModal } from './components/PTRegisterModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { ExportHTMLModal } from './components/ExportHTMLModal';
+import { EditPatientModal } from './components/EditPatientModal';
+import { EditAssessmentModal } from './components/EditAssessmentModal';
+import { EditExerciseModal } from './components/EditExerciseModal';
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
 
 const AUTH_STORAGE_KEY = 'physio_auth_user_v2';
 
 export default function App() {
   const [patients, setPatients] = useState<PatientProfile[]>(INITIAL_PATIENTS);
+  const [exercises, setExercises] = useState<Exercise[]>(EXERCISES);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -57,6 +62,25 @@ export default function App() {
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [modalPatient, setModalPatient] = useState<PatientProfile>(INITIAL_PATIENTS[0]);
+
+  // Admin Editing & Deletion Modals state
+  const [editPatientModalOpen, setEditPatientModalOpen] = useState(false);
+  const [patientToEdit, setPatientToEdit] = useState<PatientProfile | null>(null);
+
+  const [editAssessmentModalOpen, setEditAssessmentModalOpen] = useState(false);
+  const [assessmentToEdit, setAssessmentToEdit] = useState<PostureAssessment | null>(null);
+
+  const [editExerciseModalOpen, setEditExerciseModalOpen] = useState(false);
+  const [exerciseToEdit, setExerciseToEdit] = useState<Exercise | null>(null);
+
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: 'patient' | 'assessment' | 'symptom' | 'exercise';
+    id: string;
+    secondaryId?: string;
+    name: string;
+    description?: string;
+  } | null>(null);
 
   // Sync active patient with logged in patient user
   useEffect(() => {
@@ -276,6 +300,167 @@ export default function App() {
     );
   };
 
+  // Admin: Edit Patient
+  const handleStartEditPatient = (patient: PatientProfile) => {
+    setPatientToEdit(patient);
+    setEditPatientModalOpen(true);
+  };
+
+  const handleSaveEditedPatient = (updated: PatientProfile) => {
+    setPatients((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    if (activePatient.id === updated.id) {
+      setActivePatient(updated);
+    }
+  };
+
+  const handlePromptDeletePatient = (patient: PatientProfile) => {
+    setDeleteTarget({
+      type: 'patient',
+      id: patient.id,
+      name: `${patient.name} (${patient.code})`,
+      description: `การลบข้อมูลผู้ป่วยรหัส ${patient.code} จะลบผลการประเมินและบันทึกทั้งหมดอย่างถาวร`,
+    });
+    setConfirmDeleteOpen(true);
+  };
+
+  // Admin: Edit & Delete Posture Assessment
+  const handleStartEditAssessment = (assessment: PostureAssessment) => {
+    setAssessmentToEdit(assessment);
+    setEditAssessmentModalOpen(true);
+  };
+
+  const handleSaveEditedAssessment = (updated: PostureAssessment) => {
+    setPatients((prev) =>
+      prev.map((p) => {
+        if (p.id === activePatient.id) {
+          const updatedAsms = p.assessments.map((a) => (a.id === updated.id ? updated : a));
+          return {
+            ...p,
+            cvaCurrent: updated.cvaAngle,
+            assessments: updatedAsms,
+          };
+        }
+        return p;
+      })
+    );
+    setActivePatient((prev) => ({
+      ...prev,
+      cvaCurrent: updated.cvaAngle,
+      assessments: prev.assessments.map((a) => (a.id === updated.id ? updated : a)),
+    }));
+    if (currentAssessment.id === updated.id) {
+      setCurrentAssessment(updated);
+    }
+  };
+
+  const handlePromptDeleteAssessment = (patientId: string, assessmentId: string) => {
+    const targetAsm = activePatient.assessments.find((a) => a.id === assessmentId);
+    setDeleteTarget({
+      type: 'assessment',
+      id: assessmentId,
+      secondaryId: patientId,
+      name: `ผลประเมินสัปดาห์ที่ ${targetAsm?.week ?? ''} (${targetAsm?.date ?? ''})`,
+      description: 'ผลการตรวจและรูปถ่ายท่าทางทั้งหมดในครั้งนี้จะถูกลบออกจากประวัติ',
+    });
+    setConfirmDeleteOpen(true);
+  };
+
+  // Admin/Patient: Delete Symptom Log
+  const handlePromptDeleteSymptomLog = (patientId: string, logId: string) => {
+    const targetLog = activePatient.symptomLogs.find((l) => l.id === logId);
+    setDeleteTarget({
+      type: 'symptom',
+      id: logId,
+      secondaryId: patientId,
+      name: `บันทึกอาการวันที่ ${targetLog?.date ?? ''}`,
+      description: `ระดับความปวด พัก ${targetLog?.restPain ?? 0} / งาน ${targetLog?.workPain ?? 0}`,
+    });
+    setConfirmDeleteOpen(true);
+  };
+
+  // Admin: Edit & Delete Exercise
+  const handleStartEditExercise = (exercise: Exercise) => {
+    setExerciseToEdit(exercise);
+    setEditExerciseModalOpen(true);
+  };
+
+  const handleSaveEditedExercise = (updated: Exercise) => {
+    setExercises((prev) => prev.map((ex) => (ex.id === updated.id ? updated : ex)));
+  };
+
+  const handlePromptDeleteExercise = (exerciseId: string) => {
+    const targetEx = exercises.find((e) => e.id === exerciseId);
+    setDeleteTarget({
+      type: 'exercise',
+      id: exerciseId,
+      name: `${targetEx?.title} (${targetEx?.thaiName})`,
+      description: 'ท่ากายภาพนี้จะถูกลบออกจากโปรแกรมออกกำลังกาย',
+    });
+    setConfirmDeleteOpen(true);
+  };
+
+  // Centralized Confirm Delete Executor
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === 'patient') {
+      const remaining = patients.filter((p) => p.id !== deleteTarget.id);
+      setPatients(remaining);
+      if (activePatient.id === deleteTarget.id) {
+        if (remaining.length > 0) {
+          setActivePatient(remaining[0]);
+        }
+      }
+      if (currentScreen === 'pt-patient-detail') {
+        setCurrentScreen('pt-dashboard');
+      }
+    } else if (deleteTarget.type === 'assessment') {
+      const patientId = deleteTarget.secondaryId || activePatient.id;
+      setPatients((prev) =>
+        prev.map((p) => {
+          if (p.id === patientId) {
+            const filteredAsms = p.assessments.filter((a) => a.id !== deleteTarget.id);
+            return {
+              ...p,
+              assessments: filteredAsms,
+              cvaCurrent: filteredAsms.length > 0 ? filteredAsms[filteredAsms.length - 1].cvaAngle : p.cvaCurrent,
+            };
+          }
+          return p;
+        })
+      );
+      setActivePatient((prev) => {
+        const filteredAsms = prev.assessments.filter((a) => a.id !== deleteTarget.id);
+        return {
+          ...prev,
+          assessments: filteredAsms,
+          cvaCurrent: filteredAsms.length > 0 ? filteredAsms[filteredAsms.length - 1].cvaAngle : prev.cvaCurrent,
+        };
+      });
+    } else if (deleteTarget.type === 'symptom') {
+      const patientId = deleteTarget.secondaryId || activePatient.id;
+      setPatients((prev) =>
+        prev.map((p) => {
+          if (p.id === patientId) {
+            return {
+              ...p,
+              symptomLogs: p.symptomLogs.filter((l) => l.id !== deleteTarget.id),
+            };
+          }
+          return p;
+        })
+      );
+      setActivePatient((prev) => ({
+        ...prev,
+        symptomLogs: prev.symptomLogs.filter((l) => l.id !== deleteTarget.id),
+      }));
+    } else if (deleteTarget.type === 'exercise') {
+      setExercises((prev) => prev.filter((ex) => ex.id !== deleteTarget.id));
+    }
+
+    setDeleteTarget(null);
+  };
+
   const getNextPatientCode = () => {
     const nextNum = patients.length + 1;
     return `P00${nextNum}`.slice(-4);
@@ -434,9 +619,13 @@ export default function App() {
               setCurrentScreen('exercise-player');
             }}
             onStartTodayWorkout={() => {
-              setSelectedExercise(EXERCISES[0]);
+              setSelectedExercise(exercises[0] || EXERCISES[0]);
               setCurrentScreen('exercise-player');
             }}
+            exercises={exercises}
+            isAdmin={role === 'admin'}
+            onEditExercise={handleStartEditExercise}
+            onDeleteExercise={handlePromptDeleteExercise}
           />
         )}
 
@@ -455,6 +644,7 @@ export default function App() {
             onBack={() => setCurrentScreen('home')}
             onSaveLog={handleSaveSymptomLog}
             existingLogs={activePatient.symptomLogs}
+            onDeleteLog={(logId) => handlePromptDeleteSymptomLog(activePatient.id, logId)}
           />
         )}
 
@@ -489,6 +679,8 @@ export default function App() {
               setActivePatient(p);
               setCurrentScreen('capture');
             }}
+            onEditPatient={handleStartEditPatient}
+            onDeletePatient={handlePromptDeletePatient}
           />
         )}
 
@@ -503,6 +695,11 @@ export default function App() {
             }}
             onStartClinicCapture={() => setCurrentScreen('capture')}
             onUpdateNotes={handleUpdatePtNotes}
+            onEditPatient={handleStartEditPatient}
+            onDeletePatient={handlePromptDeletePatient}
+            onEditAssessment={handleStartEditAssessment}
+            onDeleteAssessment={handlePromptDeleteAssessment}
+            onDeleteSymptomLog={handlePromptDeleteSymptomLog}
           />
         )}
       </main>
@@ -546,6 +743,44 @@ export default function App() {
       <ExportHTMLModal
         isOpen={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
+      />
+
+      {/* Admin: Edit Patient Modal */}
+      <EditPatientModal
+        isOpen={editPatientModalOpen}
+        onClose={() => setEditPatientModalOpen(false)}
+        patient={patientToEdit}
+        onSave={handleSaveEditedPatient}
+      />
+
+      {/* Admin: Edit Assessment Modal */}
+      <EditAssessmentModal
+        isOpen={editAssessmentModalOpen}
+        onClose={() => setEditAssessmentModalOpen(false)}
+        assessment={assessmentToEdit}
+        onSave={handleSaveEditedAssessment}
+        onDelete={(asmId) => handlePromptDeleteAssessment(activePatient.id, asmId)}
+      />
+
+      {/* Admin: Edit Exercise Modal */}
+      <EditExerciseModal
+        isOpen={editExerciseModalOpen}
+        onClose={() => setEditExerciseModalOpen(false)}
+        exercise={exerciseToEdit}
+        onSave={handleSaveEditedExercise}
+        onDelete={handlePromptDeleteExercise}
+      />
+
+      {/* Admin / Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={confirmDeleteOpen}
+        onClose={() => {
+          setConfirmDeleteOpen(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        itemName={deleteTarget?.name || ''}
+        itemDescription={deleteTarget?.description}
       />
     </div>
   );

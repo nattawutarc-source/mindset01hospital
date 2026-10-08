@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
 import { PatientProfile, PostureAssessment, ViewAngle } from '../types';
-import { ArrowLeft, QrCode, Camera, Check, FileText, Activity, Dumbbell, Sparkles, MessageCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  QrCode,
+  Camera,
+  Check,
+  FileText,
+  Activity,
+  Dumbbell,
+  Sparkles,
+  MessageCircle,
+  Edit3,
+  Trash2,
+  Calendar,
+  AlertCircle
+} from 'lucide-react';
 import { SAMPLE_IMAGES } from '../data/mockData';
 
 interface PTPatientDetailViewProps {
@@ -9,6 +23,11 @@ interface PTPatientDetailViewProps {
   onOpenShareModal: (patient: PatientProfile) => void;
   onStartClinicCapture: () => void;
   onUpdateNotes: (patientId: string, notes: string) => void;
+  onEditPatient: (patient: PatientProfile) => void;
+  onDeletePatient: (patient: PatientProfile) => void;
+  onEditAssessment?: (assessment: PostureAssessment) => void;
+  onDeleteAssessment?: (patientId: string, assessmentId: string) => void;
+  onDeleteSymptomLog?: (patientId: string, logId: string) => void;
 }
 
 export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
@@ -17,6 +36,11 @@ export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
   onOpenShareModal,
   onStartClinicCapture,
   onUpdateNotes,
+  onEditPatient,
+  onDeletePatient,
+  onEditAssessment,
+  onDeleteAssessment,
+  onDeleteSymptomLog,
 }) => {
   const [activeTab, setActiveTab] = useState<'posture' | 'pain' | 'hep'>('posture');
   const [activeAngle, setActiveAngle] = useState<ViewAngle>('side');
@@ -71,11 +95,11 @@ export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
   return (
     <div className="max-w-4xl mx-auto px-4 pt-4 pb-24 space-y-4">
       {/* Top Patient Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="p-2 -ml-2 text-slate-700 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-2 -ml-2 text-slate-700 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -87,19 +111,40 @@ export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
               <span className="text-sm font-semibold text-slate-900">
                 {patient.name}
               </span>
+              <span className="text-xs text-slate-400 font-mono">
+                ({patient.hn})
+              </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">{patient.condition}</p>
           </div>
         </div>
 
-        {/* Share QR & Link Button */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons: Edit, Delete, QR, Clinic capture */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <button
+            onClick={() => onEditPatient(patient)}
+            className="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100/70 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="แก้ไขข้อมูลผู้ป่วย"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>แก้ไข</span>
+          </button>
+
+          <button
+            onClick={() => onDeletePatient(patient)}
+            className="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50/60 hover:bg-rose-100/70 text-rose-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="ลบข้อมูลผู้ป่วยนี้"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>ลบผู้ป่วย</span>
+          </button>
+
           <button
             onClick={() => onOpenShareModal(patient)}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 hover:border-sky-300 text-slate-700 hover:text-sky-600 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs"
+            className="px-3 py-1.5 rounded-xl border border-slate-200 hover:border-sky-300 text-slate-700 hover:text-sky-600 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
           >
             <QrCode className="w-4 h-4 text-sky-600" />
-            <span>QR & ลิงก์คนไข้</span>
+            <span>QR & ลิงก์</span>
           </button>
 
           <button
@@ -107,7 +152,7 @@ export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
             className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
           >
             <Camera className="w-4 h-4" />
-            <span>ตรวจวัดที่คลินิก</span>
+            <span>ตรวจวัดคลินิก</span>
           </button>
         </div>
       </div>
@@ -182,8 +227,31 @@ export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
               {/* Week 0 */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-800">สัปดาห์ที่ 0</span>
-                  <span className="text-slate-400 font-mono text-[11px]">{asm0.date}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-800">สัปดาห์ที่ 0</span>
+                    <span className="text-slate-400 font-mono text-[11px]">{asm0.date}</span>
+                  </div>
+                  {/* Assessment Actions */}
+                  <div className="flex items-center gap-1">
+                    {onEditAssessment && patient.assessments[0] && (
+                      <button
+                        onClick={() => onEditAssessment(patient.assessments[0])}
+                        title="แก้ไขผลประเมินสัปดาห์ที่ 0"
+                        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    )}
+                    {onDeleteAssessment && patient.assessments[0] && (
+                      <button
+                        onClick={() => onDeleteAssessment(patient.id, patient.assessments[0].id)}
+                        title="ลบผลประเมินสัปดาห์ที่ 0"
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-3/4 border border-slate-200">
                   <img
@@ -201,8 +269,31 @@ export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
               {/* Week 4 */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-emerald-700">สัปดาห์ที่ 4</span>
-                  <span className="text-slate-400 font-mono text-[11px]">{asm4.date}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-emerald-700">สัปดาห์ที่ 4</span>
+                    <span className="text-slate-400 font-mono text-[11px]">{asm4.date}</span>
+                  </div>
+                  {/* Assessment Actions */}
+                  <div className="flex items-center gap-1">
+                    {onEditAssessment && patient.assessments[1] && (
+                      <button
+                        onClick={() => onEditAssessment(patient.assessments[1])}
+                        title="แก้ไขผลประเมินสัปดาห์ที่ 4"
+                        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    )}
+                    {onDeleteAssessment && patient.assessments[1] && (
+                      <button
+                        onClick={() => onDeleteAssessment(patient.id, patient.assessments[1].id)}
+                        title="ลบผลประเมินสัปดาห์ที่ 4"
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-3/4 border-2 border-emerald-500">
                   <img
@@ -307,6 +398,57 @@ export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
               <span>ปวดขณะทำงาน</span>
             </div>
           </div>
+
+          {/* Individual Symptom Logs List */}
+          <div className="pt-4 border-t border-slate-100 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">
+                ประวัติบันทึกอาการปวดรายวัน ({patient.symptomLogs?.length || 0} รายการ)
+              </span>
+            </div>
+
+            {(!patient.symptomLogs || patient.symptomLogs.length === 0) ? (
+              <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">
+                ยังไม่มีการบันทึกอาการปวดรายวันเพิ่มเติม
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {patient.symptomLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="font-semibold text-slate-800">{log.date}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-1">
+                        ปัจจัยกระตุ้น: <span className="text-slate-700">{log.triggers?.join(', ') || 'ไม่มี'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 block">พัก / งาน</span>
+                        <span className="font-mono font-bold text-slate-800 text-sm">
+                          {log.restPain} / {log.workPain}
+                        </span>
+                      </div>
+                      {onDeleteSymptomLog && (
+                        <button
+                          onClick={() => onDeleteSymptomLog(patient.id, log.id)}
+                          title="ลบบันทึกอาการนี้"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -371,7 +513,20 @@ export const PTPatientDetailView: React.FC<PTPatientDetailViewProps> = ({
           className="w-full p-3 rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-sky-500 leading-relaxed"
         />
 
-        <div className="flex justify-end">
+        <div className="flex justify-end items-center gap-2">
+          {ptNote && (
+            <button
+              onClick={() => {
+                setPtNote('');
+                onUpdateNotes(patient.id, '');
+              }}
+              className="px-3 py-2 border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-500 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="ลบหรือล้างข้อความโน้ตนี้"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>ลบข้อความโน้ต</span>
+            </button>
+          )}
           <button
             onClick={handleSaveNotes}
             className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"

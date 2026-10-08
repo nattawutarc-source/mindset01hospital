@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { PatientProfile, ScreenId } from '../types';
-import { Users, Plus, Search, CheckCircle2, Clock, AlertCircle, QrCode, ChevronRight, Stethoscope, Download } from 'lucide-react';
+import {
+  Users,
+  Plus,
+  Search,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  QrCode,
+  ChevronRight,
+  Stethoscope,
+  Download,
+  Edit3,
+  Trash2
+} from 'lucide-react';
 
 interface PTDashboardViewProps {
   patients: PatientProfile[];
@@ -8,6 +21,8 @@ interface PTDashboardViewProps {
   onOpenRegisterModal: () => void;
   onOpenShareModal: (patient: PatientProfile) => void;
   onStartClinicAssessment: (patient: PatientProfile) => void;
+  onEditPatient: (patient: PatientProfile) => void;
+  onDeletePatient: (patient: PatientProfile) => void;
 }
 
 export const PTDashboardView: React.FC<PTDashboardViewProps> = ({
@@ -16,14 +31,16 @@ export const PTDashboardView: React.FC<PTDashboardViewProps> = ({
   onOpenRegisterModal,
   onOpenShareModal,
   onStartClinicAssessment,
+  onEditPatient,
+  onDeletePatient,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'in-progress' | 'not-started'>('all');
 
-  const totalPatients = 10;
-  const completedCount = 6;
-  const inProgressCount = 3;
-  const notStartedCount = 1;
+  const totalPatients = patients.length;
+  const completedCount = patients.filter((p) => p.status === 'completed').length;
+  const inProgressCount = patients.filter((p) => p.status === 'in-progress').length;
+  const notStartedCount = patients.filter((p) => p.status === 'not-started').length;
 
   const filteredPatients = patients.filter((p) => {
     const matchesSearch =
@@ -225,8 +242,24 @@ export const PTDashboardView: React.FC<PTDashboardViewProps> = ({
                       </button>
 
                       <button
+                        onClick={() => onEditPatient(patient)}
+                        title="แก้ไขข้อมูลผู้ป่วย"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => onDeletePatient(patient)}
+                        title="ลบข้อมูลผู้ป่วยนี้"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+
+                      <button
                         onClick={() => onSelectPatient(patient)}
-                        className="px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 font-medium text-[11px] flex items-center gap-1 transition-colors"
+                        className="px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 font-medium text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
                       >
                         <span>ตรวจประเมิน</span>
                         <ChevronRight className="w-3 h-3" />
